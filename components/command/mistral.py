@@ -62,11 +62,9 @@ def ask_mistral(question = ""):
 
 def open_mistral(question = ""):
     subprocess.Popen(
-        f'start "" /max cmd /k "{sys.executable} {os.path.join(os.path.dirname(__file__), "mistral.py")} {question}"',
+        f'wt -M python {os.path.join(os.path.dirname(__file__), "mistral.py")} {question}',
         shell=True
     )
-
-
 if __name__ == "__main__":
     if len(sys.argv) > 1: # RUNS AS A NEW PROCESS
         question_text = " ".join(sys.argv[1:])
