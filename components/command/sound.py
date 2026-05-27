@@ -1,8 +1,5 @@
 import time
 import ctypes
-import threading
-from playsound import playsound
-import os
 
 # VIRTUAL KEY CODES
 VK_MEDIA_PLAY_PAUSE = 0xB3
@@ -34,16 +31,12 @@ def previous_track():
     send_key(VK_MEDIA_PREV_TRACK)
 
 def volume_up():
-    for i in range(5):
+    for _ in range(5):
         send_key(VK_VOLUME_UP)
 
 def volume_down():
-    for i in range(5):
+    for _ in range(5):
         send_key(VK_VOLUME_DOWN)
 
 def mute():
     send_key(VK_VOLUME_MUTE)
-    
-def activate():
-    mp3_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'activated.mp3')
-    threading.Thread(target=lambda: playsound(mp3_path), daemon=True).start()

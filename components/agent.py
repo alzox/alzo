@@ -1,12 +1,14 @@
 import os
-from langchain.tools import tool
 import requests
-from icalendar import Calendar, Event
+
+from icalendar import Calendar
 import recurring_ical_events
 import arrow
 
+from langchain.tools import tool
+
 @tool
-def weekly_meetings() -> str:
+def weekly_meetings():
     """
     Fetches and displays the meetings a user has given the current week.
     Respond with "Here are your meetings for the week:"
@@ -14,9 +16,8 @@ def weekly_meetings() -> str:
     """
     GOOGLE = os.getenv("GOOGLE_ICS_LINK")
     OUTLOOK = os.getenv("OUTLOOK_ICS_LINK")
-    print("Fetching .ics files")
-    google_calendar = Calendar.from_ical(requests.get(GOOGLE).text)
-    outlook_calendar = Calendar.from_ical(requests.get(OUTLOOK).text)
+    google_calendar = Calendar.from_ical(requests.get(GOOGLE).text)     # pyright: ignore
+    outlook_calendar = Calendar.from_ical(requests.get(OUTLOOK).text)   # pyright: ignore
     now = arrow.now().datetime.date()
     weekend = arrow.now().ceil('week').datetime.date()
     def get_event_date(event):
@@ -26,26 +27,26 @@ def weekly_meetings() -> str:
             + recurring_ical_events.of(google_calendar).between(start=now, stop=weekend)          \
             + recurring_ical_events.of(outlook_calendar).between(start=now, stop=weekend)         
     
-    return [(event.start,
-             event.end,
-             event.summary,
-             event.description.replace("*",""),
-             event.duration,
-             event.attendees,
-             event.location,
-             event.classification,
-             event.categories
+    return [(event.start,                       # pyright: ignore
+             event.end,                         # pyright: ignore
+             event.summary,                     # pyright: ignore
+             event.description.replace("*",""), # pyright: ignore
+             event.duration,                    # pyright: ignore
+             event.attendees,                   # pyright: ignore
+             event.location,                    # pyright: ignore
+             event.classification,              # pyright: ignore
+             event.categories                   # pyright: ignore
              ) for event in events]
 
 TOOLS = [weekly_meetings]
 
-if __name__ == "__main__":
-    from dotenv import load_dotenv
-    load_dotenv()
-    print(arrow.now())
-    print(arrow.now().ceil('week'))
-    print(weekly_meetings())
-    for event in weekly_meetings():
-        print(event)
-        print("-----")
-    print(len(weekly_meetings()))
+# if __name__ == "__main__":
+   # from dotenv import load_dotenv
+    # print(arrow.now())
+    # print(arrow.now().ceil('week'))
+    # print(weekly_meetings())
+    # for event in weekly_meetings():
+    #     print(event)
+    #     print("-----")
+    # print(len(weekly_meetings()))
+

@@ -3,66 +3,64 @@ import tkinter as tk
 from tkinter import ttk
 import time
 
+X_OFFSET = 1350
+Y_OFFSET = 350
+
 def make_message_box(message):
     def show_box():
+        # Root Configs
         root = tk.Tk()
         root.title("alzo")
         root.attributes("-topmost", True)
         root.resizable(False, False)
+        root.overrideredirect(False)
 
+        # Message Box
         label = tk.Label(root, text=message, padx=20, pady=20, justify="left", wraplength=750, anchor="center") #wrap is kind of magic, but max-width of your monitor
         label.pack()
-        
+
+        # Placement
         x,y = get_middle(root)
         root.geometry(f"+{x}+{y}")
 
-        root.overrideredirect(False)
         root.mainloop()
-    show_box()
-    # threading.Thread(target=show_box, daemon=True).start()
+    # show_box()
+    threading.Thread(target=show_box, daemon=True).start()
 
 def make_progress_bar(duration=5):
     def show_bar():
+        # Root Configs
         root = tk.Tk()
-        # root.attributes("-alpha", 0.7)
         root.title("Listening...")
         root.attributes("-topmost", True)
         root.resizable(False, False)
-
-        # Optional overlay style
-        root.overrideredirect(True)
         root.configure(bg="black")
-        root.wm_attributes("-transparentcolor", "black")
-
-        # Container frame (gives padding + structure)
-        frame = tk.Frame(root)
-        frame.pack(pady=10)
+        root.overrideredirect(True)
 
         # Label 
         label = tk.Label(
-            root,
-            text="Listening...",
-            fg="white",
-            bg="black",   
-            font=("Segoe UI", 14)
-            )
-        label.pack()
+                root,
+                text="Listening...",
+                fg="white",
+                bg="black",   
+                font=("Segoe UI", 14)
+                )
+        label.pack(pady=10)
 
-        # Progress bar
+        # Progress Bar
         style = ttk.Style()
         style.theme_use("default")
-
         style.configure(
-            "Clean.Horizontal.TProgressbar",
-            troughcolor="black",   # must match window bg
-            background="white",  # bar color
-            bordercolor="black",
-            lightcolor="white",
-            darkcolor="white",
-            relief="flat",
-            throughrelief="flat",
-            borderwidth=0
-        )
+                "Clean.Horizontal.TProgressbar",
+                troughcolor="black",   # must match window bg
+                background="white",  # bar color
+                bordercolor="black",
+                lightcolor="white",
+                darkcolor="white",
+                relief="flat",
+                throughrelief="flat",
+                borderwidth=0
+                )
         progress = ttk.Progressbar(
                 root,
                 style="Clean.Horizontal.TProgressbar",
@@ -73,7 +71,7 @@ def make_progress_bar(duration=5):
         progress.pack()
         root.update_idletasks()
 
-        # x,y are found by running the helper script
+        # Custom Offsets
         x = -650
         y = 450
         root.geometry(f"{600}x{120}+{x}+{y}")
@@ -90,18 +88,17 @@ def make_progress_bar(duration=5):
         root.destroy()
     # show_bar()
     threading.Thread(target=show_bar, daemon=True).start()
-    
-def get_middle(root: tk):
+
+def get_middle(root):
     root.update_idletasks()
     width = root.winfo_width()
     height = root.winfo_height()
     screen_width = root.winfo_screenwidth()
     screen_height = root.winfo_screenheight()
-    x = (screen_width // 2) - (width // 2) + 1350 # Magic number, but meant to move if you have multiple monitors
-    y = (screen_height // 2) - (height // 2) + 350 # Same as above, X,Y starts at 0,0 top-left of screen
+    x = (screen_width // 2) - (width // 2) + X_OFFSET # Magic number, but meant to move if you have multiple monitors
+    y = (screen_height // 2) - (height // 2) + Y_OFFSET # Same as above, XY starts at 0,0 top-left of screen
     return x,y
- 
-# Helps place root.geometry to where you want it    
+
 def get_mouse_position():
     root = tk.Tk()
     root.withdraw()
@@ -109,7 +106,7 @@ def get_mouse_position():
     y = root.winfo_pointery()
     root.destroy()
     return x, y
-    
+
 if __name__ == "__main__":
     make_progress_bar(2)
     while True:

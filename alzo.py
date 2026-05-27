@@ -4,8 +4,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import components.tk as tk
-import components.sound as sound
 import components.worker as worker
+
+DURATION = 2
 
 # init
 r = sr.Recognizer()
@@ -18,8 +19,6 @@ worker.start_worker()
 
 while True:
     with m as source:
-        # dispatch listening animation
-        tk.make_progress_bar(2)
-        audio = r.record(source, duration=2)
+        tk.make_progress_bar(DURATION)
+        audio = r.record(source, duration=DURATION)
     worker.submit_audio(audio)
-
