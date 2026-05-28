@@ -1,6 +1,7 @@
 import speech_recognition as sr
 import threading 
 import queue
+import inspect
 
 import components.agent as agent
 import components.tk as tk
@@ -21,13 +22,18 @@ def action(command):
         contains_all = all((word in command_words for word in keywords))
         if contains_all:
             print(f"Executing command: {keywords}")
-            func(command)
-            return
+            sig = inspect.signature(func)
+            params = sig.parameters
 
-        if len(command_words) >= 10: # Don't want this running for random pick-ups
-            result = AGENT.invoke({"messages": [{"role": "user", "content": f"{command}"}]})
-            if result['messages'][-1].content.replace(".","") != "Nothing":
-                tk.make_message_box(result['messages'][-1].content.replace("*",""))
+            if len(params) == 0:
+                func()
+            else:
+                func(command)
+        # Not sure how I want this to work, maybe set a flag so shows don't invoke it, or better prompting/reviewing the prompting
+        # if len(command_words) >= 10: # Don't want this running for random pick-ups
+        #     result = AGENT.invoke({"messages": [{"role": "user", "content": f"{command}"}]})
+        #     if result['messages'][-1].content.replace(".","") != "Nothing":
+        #         tk.make_message_box(result['messages'][-1].content.replace("*",""))
     return 0
 
 def worker():
