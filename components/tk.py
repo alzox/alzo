@@ -6,88 +6,116 @@ import time
 X_OFFSET = 1350
 Y_OFFSET = 350
 
-def make_message_box(message):
-    def show_box():
-        # Root Configs
-        root = tk.Tk()
-        root.title("alzo")
-        root.attributes("-topmost", True)
-        root.resizable(False, False)
-        root.overrideredirect(False)
+class UIManager:
+    def __init__(self):
+        self.root = tk.Tk()
+        self.root.withdraw()  # hide initially
 
-        # Message Box
-        label = tk.Label(root, text=message, padx=20, pady=20, justify="left", wraplength=750, anchor="center") #wrap is kind of magic, but max-width of your monitor
+        self.current = None  # "box" | "bar"
+        self.container = None
+
+    # --------- CORE CONTROL ---------
+    def teardown(self):
+        if self.container:
+            self.container.destroy()
+            self.container = None
+        self.current = None
+
+    # --------- MESSAGE BOX ---------
+    def setup_box(self, message):
+        self.teardown()
+        self.current = "box"
+
+        self.root.deiconify()
+        self.root.title("alzo")
+        self.root.attributes("-topmost", True)
+        self.root.resizable(False, False)
+        self.root.overrideredirect(False)
+        self.root.configure(bg="white")
+
+        self.container = tk.Frame(self.root, bg="white")
+        self.container.pack()
+
+        label = tk.Label(
+            self.container,
+            text=message,
+            padx=20,
+            pady=20,
+            wraplength=750,
+            justify="left",
+            bg="white"
+        )
         label.pack()
 
-        # Placement
-        x,y = get_middle(root)
-        root.geometry(f"+{x}+{y}")
+        self.root.update_idletasks()
+        x = (self.root.winfo_screenwidth() // 2) - 300
+        y = (self.root.winfo_screenheight() // 2) - 100
+        self.root.geometry(f"+{x}+{y}")
 
-        root.mainloop()
-    # show_box()
-    threading.Thread(target=show_box, daemon=True).start()
+    # --------- PROGRESS BAR ---------
+    def setup_bar(self, duration=5):
+        self.teardown()
+        self.current = "bar"
 
-def make_progress_bar(duration=5):
-    def show_bar():
-        # Root Configs
-        root = tk.Tk()
-        root.title("Listening...")
-        root.attributes("-topmost", True)
-        root.resizable(False, False)
-        root.configure(bg="black")
-        root.overrideredirect(True)
+        self.root.deiconify()
+        self.root.title("Listening...")
+        self.root.attributes("-topmost", True)
+        self.root.resizable(False, False)
+        self.root.configure(bg="black")
+        self.root.overrideredirect(True)
 
-        # Label 
+        self.container = tk.Frame(self.root, bg="black")
+        self.container.pack(fill="both", expand=True)
+
         label = tk.Label(
-                root,
-                text="Listening...",
-                fg="white",
-                bg="black",   
-                font=("Segoe UI", 14)
-                )
+            self.container,
+            text="Listening...",
+            fg="white",
+            bg="black",
+            font=("Segoe UI", 14)
+        )
         label.pack(pady=10)
 
-        # Progress Bar
-        style = ttk.Style()
-        style.theme_use("default")
-        style.configure(
-                "Clean.Horizontal.TProgressbar",
-                troughcolor="black",   # must match window bg
-                background="white",  # bar color
-                bordercolor="black",
-                lightcolor="white",
-                darkcolor="white",
-                relief="flat",
-                throughrelief="flat",
-                borderwidth=0
-                )
         progress = ttk.Progressbar(
-                root,
-                style="Clean.Horizontal.TProgressbar",
-                orient="horizontal",
-                length=500,
-                mode="determinate"
-                )
+            self.container,
+            orient="horizontal",
+            length=500,
+            mode="determinate"
+        )
         progress.pack()
-        root.update_idletasks()
 
-        # Custom Offsets
-        x = -650
-        y = 450
-        root.geometry(f"{600}x{120}+{x}+{y}")
+        # position
+        self.root.geometry("600x120+-650+450")
 
-        # Animate
-        steps = 100
-        delay = duration / steps
+        # animate in background
+        def animate():
+            steps = 100
+            delay = duration / steps
 
-        for i in range(steps + 1):
-            progress["value"] = i
-            root.update()
-            time.sleep(delay)
+            for i in range(steps + 1):
+                if self.current != "bar":
+                    return
+                progress["value"] = i
+                time.sleep(delay)
 
-        root.destroy()
-    # show_bar()
-    threading.Thread(target=show_bar, daemon=True).start()
+            self.root.withdraw()
+            self.current = None
+
+        threading.Thread(target=animate, daemon=True).start()
+
+# Singleton
+ui = UIManager()
+
+
+# --------- PUBLIC FUNCTIONS ---------
+def run_on_ui_thread(func, *args):
+    ui.root.after(0, func, *args)
+
+def make_message_box(message):
+    ui.setup_box(message)
+
+def make_progress_bar(duration=5):
+    ui.setup_bar(duration)
 
 def get_middle(root):
     root.update_idletasks()

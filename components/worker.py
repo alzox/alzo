@@ -45,19 +45,26 @@ def worker():
             break
 
         try:
-            command = r.recognize_google(audio).lower().strip().replace(".","") # pyright: ignore
+            command = r.recognize_google(audio).lower().replace(".","").strip() # pyright: ignore
             if command != "":
                 print(command)
                 action(command)
         except Exception as e:
-            print(e)
-
+            print("[ERROR]")
+    
         audio_queue.task_done()
 
 def start_worker():
     thread = threading.Thread(target=worker, daemon=True)
     thread.start()
     return thread
+
+def start_workers():
+    threads = []
+    for _ in range(5):
+        t = threading.Thread(target=worker, daemon=True)
+        t.start()
+        threads.append(t)
 
 def submit_audio(audio):
     audio_queue.put(audio)
