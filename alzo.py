@@ -8,14 +8,12 @@ import components.tk as tk
 import components.worker as worker
 import components.data as data
 
-DURATION = 2
+DURATION = 3
 
 # init
 ui = tk.UIManager()
 r = sr.Recognizer()
 m = sr.Microphone()
-r.pause_threshold = .5                      # How long to wait before considering speech ended
-r.phrase_threshold = .3                     # Minimum audio length to consider as speech
 with m as source: r.adjust_for_ambient_noise(source, duration=3)
 
 def listen():

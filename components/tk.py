@@ -37,7 +37,6 @@ class UIManager:
             pady=0
         )
 
-
         self.status_label = tk.Label(
             self.container,
             text=self.current_status_text,

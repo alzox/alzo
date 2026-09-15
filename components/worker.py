@@ -2,15 +2,14 @@ import speech_recognition as sr
 import threading 
 import inspect
 
-import components.agent as agent
 import components.data as data
 from components.commands import COMMANDS
 
-from langchain.agents import create_agent
-from langchain_mistralai import ChatMistralAI
-MISTRAL = ChatMistralAI(model="mistral-small-2503", temperature=.7) # pyright: ignore
-SYSTEM_PROMPT = """You are a helpful AI assistant meant to answer questions and call tools as a desktop assistant."""
-AGENT = create_agent(model = MISTRAL, tools=agent.TOOLS, system_prompt=SYSTEM_PROMPT)
+# from langchain.agents import create_agent
+# from langchain_mistralai import ChatMistralAI
+# MISTRAL = ChatMistralAI(model="mistral-small-2503", temperature=.7) # pyright: ignore
+# SYSTEM_PROMPT = """You are a helpful AI assistant meant to answer questions and call tools as a desktop assistant."""
+# AGENT = create_agent(model = MISTRAL, tools=agent.TOOLS, system_prompt=SYSTEM_PROMPT)
 
 def action(command):
     for keywords, func in COMMANDS.items():
@@ -34,7 +33,7 @@ def worker():
             break
 
         try:
-            command = r.recognize_google(audio).lower().replace(".","").strip() # pyright: ignore
+            command = r.recognize_whisper(audio, model="base.en").lower().replace(".","").strip() # pyright: ignore
             data.ui.put(("recognized",command))
             if command != "":
                 action(command)

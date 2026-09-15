@@ -40,7 +40,7 @@ COMMANDS = {
     ("go", "to", "steam"): lambda: win32.make_window_active("Steam"),
     
     # GOOGLE CHROME
-    # ("google",): lambda command: os.system(rf'start "" "https://www.google.com/search?q={command}"') if not command == "google" and command.startswith("google") else None,
+    ("google",): lambda command: os.system(rf'start "" "https://www.google.com/search?q={command}"') if not command == "google" and command.startswith("google") else None,
 
     # SPOTIFY (Requires Premium) 
     # ("play", "music"): lambda: spotify.play_pause(),
@@ -55,19 +55,16 @@ COMMANDS = {
     # ("clear", "q"): lambda: spotify.clear_queue(),
     
     # SOUND
-    ("play","sound"): lambda: sound.play_pause(),
-    ("pause","sound"): lambda: sound.play_pause(),
+    ("play",): lambda: sound.play_pause(),
+    ("pause",): lambda: sound.play_pause(),
     ("volume", "up"): lambda: sound.volume_up(),
     ("volume", "down"): lambda: sound.volume_down(),
-    ("mute", "sound"): lambda: sound.mute(),
     ("mute",): lambda: sound.mute(),
-    ("fast", "forward"): lambda: sound.seek_forward(),
+    ("unmute",): lambda: sound.mute(),
+    ("next",): lambda: sound.seek_forward(),
     ("rewind",): lambda: sound.seek_backward(),
 
     # MISTRAL
-    ("question",): lambda command: mistral.open_mistral(command), 
-    ("open", "chat"): lambda command: mistral.open_mistral()
+    # ("question",): lambda command: mistral.open_mistral(command), 
+    # ("open", "chat"): lambda command: mistral.open_mistral()
 }
-
-if __name__ == "__main__":
-    mistral.open_mistral("QUESTION HERE")
