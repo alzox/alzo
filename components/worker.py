@@ -34,10 +34,11 @@ def worker():
 
         try:
             command = r.recognize_whisper(audio, model="base.en").lower().replace(".","").strip() # pyright: ignore
-            data.ui.put(("recognized",command))
             if command != "":
+                data.ui.put(("recognized",command))
                 action(command)
-        except Exception:
+        except Exception as e:
+            print(e)
             pass
     
         data.audio.task_done()

@@ -1,4 +1,5 @@
 import os
+from typing_extensions import Doc
 import keyboard
 
 import components.command.mistral as mistral
@@ -58,7 +59,9 @@ COMMANDS = {
     ("play",): lambda: sound.play_pause(),
     ("pause",): lambda: sound.play_pause(),
     ("volume", "up"): lambda: sound.volume_up(),
+    ("sound", "up"): lambda: sound.volume_up(),
     ("volume", "down"): lambda: sound.volume_down(),
+    ("sound", "down"): lambda: sound.volume_down(),
     ("mute",): lambda: sound.mute(),
     ("unmute",): lambda: sound.mute(),
     ("next",): lambda: sound.seek_forward(),
