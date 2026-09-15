@@ -1,142 +1,162 @@
-import threading
 import tkinter as tk
-from tkinter import ttk
-import time
-
-X_OFFSET = 1350
-Y_OFFSET = 350
+import components.data as data 
+import queue
 
 class UIManager:
     def __init__(self):
         self.root = tk.Tk()
-        self.root.withdraw()  # hide initially
 
-        self.current = None  # "box" | "bar"
-        self.container = None
+        self.dot_index = 0
+        self.animating = False
+        self._drag_offset_x = 0
+        self._drag_offset_y = 0
+        self.current_status_text = "initialized"  
 
-    # --------- CORE CONTROL ---------
-    def teardown(self):
-        if self.container:
-            self.container.destroy()
-            self.container = None
-        self.current = None
+        self._build_ui()
+        self._setup_dragging()
 
-    # --------- MESSAGE BOX ---------
-    def setup_box(self, message):
-        self.teardown()
-        self.current = "box"
+        self.root.after(100, self.process_worker_status)
 
-        self.root.deiconify()
-        self.root.title("alzo")
+
+    def _build_ui(self):
+        self.transparent = "#123456"
+
         self.root.attributes("-topmost", True)
-        self.root.resizable(False, False)
-        self.root.overrideredirect(False)
-        self.root.configure(bg="white")
+        self.root.overrideredirect(True)
+        self.root.configure(bg=self.transparent)
+        self.root.attributes("-transparentcolor", self.transparent)
 
-        self.container = tk.Frame(self.root, bg="white")
-        self.container.pack()
-
-        label = tk.Label(
-            self.container,
-            text=message,
-            padx=20,
-            pady=20,
-            wraplength=750,
-            justify="left",
-            bg="white"
+        self.container = tk.Frame(
+            self.root,
+            bg=self.transparent
         )
-        label.pack()
+        self.container.pack(
+            fill="both",
+            expand=True,
+            padx=50,
+            pady=0
+        )
 
-        self.root.update_idletasks()
-        x = (self.root.winfo_screenwidth() // 2) - 300
-        y = (self.root.winfo_screenheight() // 2) - 100
+
+        self.status_label = tk.Label(
+            self.container,
+            text=self.current_status_text,
+            fg="white",
+            bg=self.transparent,
+            font=("Consolas", 12),
+            anchor="s",
+            justify="center",
+            wraplength=500,
+            bd=0, 
+            highlightthickness=0,
+            padx=0,
+            pady=0
+        )
+        self.status_label.pack(padx=0, pady=0)
+        
+    def _setup_dragging(self):
+        """Make the borderless window draggable."""
+        widgets = (
+            self.root,
+            self.container,
+            self.status_label,
+        )
+
+        for widget in widgets:
+            widget.bind("<ButtonPress-1>", self._start_drag)
+            widget.bind("<B1-Motion>", self._drag)
+
+    def _start_drag(self, event):
+        self._drag_offset_x = event.x_root - self.root.winfo_x()
+        self._drag_offset_y = event.y_root - self.root.winfo_y()
+
+    def _drag(self, event):
+        x = event.x_root - self._drag_offset_x
+        y = event.y_root - self._drag_offset_y
         self.root.geometry(f"+{x}+{y}")
 
-    # --------- PROGRESS BAR ---------
-    def setup_bar(self, duration=5):
-        self.teardown()
-        self.current = "bar"
+    def setup(self):
+        self.root.update_idletasks()
+        self.root.minsize(400,100)
+        self.resize_to_content(center=True)
 
-        self.root.deiconify()
-        self.root.title("Listening...")
-        self.root.attributes("-topmost", True)
-        self.root.resizable(False, False)
-        self.root.configure(bg="black")
-        self.root.overrideredirect(True)
+    def resize_to_content(self, center=True):
+        self.root.update_idletasks()
 
-        self.container = tk.Frame(self.root, bg="black")
-        self.container.pack(fill="both", expand=True)
+        width = self.root.winfo_reqwidth()
+        height = self.root.winfo_reqheight()
 
-        label = tk.Label(
-            self.container,
-            text="Listening...",
-            fg="white",
-            bg="black",
-            font=("Segoe UI", 14)
+        if center:
+            screen_width = self.root.winfo_screenwidth()
+            screen_height = self.root.winfo_screenheight()
+
+            x = (screen_width - width) // 2
+            y = (screen_height - height) // 2
+
+            self.root.geometry(f"{width}x{height}+{x}+{y}")
+        else:
+            self.root.geometry(f"{width}x{height}")
+
+    def animation(self):
+        """Start the dot animation until stop_animation() is called."""
+        if not self.animating:
+            self.animating = True
+            self.dot_index = 0
+            self.resize_to_content(False)
+            self._animate_dots()
+
+   
+    def _animate_dots(self):
+        if not self.animating:
+            return
+
+        dots = "." * (self.dot_index % 5)
+        combined_text = f"{self.current_status_text}\n{dots}"
+        self.status_label.config(text=combined_text)
+        self.dot_index += 1
+
+        self.resize_to_content(center=False)
+        self.root.after(350, self._animate_dots)
+
+    def set_status(self, text, color):
+        self.current_status_text = text
+        self.status_label.config(
+            text=text,
+            fg=color
         )
-        label.pack(pady=10)
 
-        progress = ttk.Progressbar(
-            self.container,
-            orient="horizontal",
-            length=500,
-            mode="determinate"
-        )
-        progress.pack()
+        self.root.update_idletasks()
+        self.resize_to_content(center=False)
 
-        # position
-        self.root.geometry("600x120+-650+450")
+    def process_worker_status(self):
+        try:
+            message = data.ui.get_nowait()
+            command = message[0]
+            value = message[1] if len(message) > 1 else None
 
-        # animate in background
-        def animate():
-            steps = 100
-            delay = duration / steps
+            if command == "start":
+                self.animation()
 
-            for i in range(steps + 1):
-                if self.current != "bar":
-                    return
-                progress["value"] = i
-                time.sleep(delay)
+            elif command == "recognized":
+                self.set_status(value, "gray")
 
-            self.root.withdraw()
-            self.current = None
+            elif command == "executed":
+                self.set_status(value, "white")
 
-        threading.Thread(target=animate, daemon=True).start()
+            elif command == "close":
+                self.root.destroy()
+                return
 
-# Singleton
-ui = UIManager()
+            data.ui.task_done()
+        except queue.Empty:
+           pass
 
+        self.root.after(100, self.process_worker_status)
 
-# --------- PUBLIC FUNCTIONS ---------
-def run_on_ui_thread(func, *args):
-    ui.root.after(0, func, *args)
-
-def make_message_box(message):
-    ui.setup_box(message)
-
-def make_progress_bar(duration=5):
-    ui.setup_bar(duration)
-
-def get_middle(root):
-    root.update_idletasks()
-    width = root.winfo_width()
-    height = root.winfo_height()
-    screen_width = root.winfo_screenwidth()
-    screen_height = root.winfo_screenheight()
-    x = (screen_width // 2) - (width // 2) + X_OFFSET # Magic number, but meant to move if you have multiple monitors
-    y = (screen_height // 2) - (height // 2) + Y_OFFSET # Same as above, XY starts at 0,0 top-left of screen
-    return x,y
-
-def get_mouse_position():
-    root = tk.Tk()
-    root.withdraw()
-    x = root.winfo_pointerx()
-    y = root.winfo_pointery()
-    root.destroy()
-    return x, y
+    def run(self):
+        self.root.mainloop()
 
 if __name__ == "__main__":
-    make_progress_bar(2)
-    while True:
-        print(get_mouse_position())
-        time.sleep(1)
+    ui = UIManager()
+    data.ui.put(("start",))
+    ui.run()

@@ -8,6 +8,8 @@ VK_MEDIA_PREV_TRACK = 0xB1
 VK_VOLUME_UP = 0xAF
 VK_VOLUME_DOWN = 0xAE
 VK_VOLUME_MUTE = 0xAD
+VK_RIGHT = 0x27
+VK_LEFT = 0x25
 KEYEVENTF_KEYUP = 0x0002
 
 def send_key(vk_code):
@@ -40,3 +42,9 @@ def volume_down():
 
 def mute():
     send_key(VK_VOLUME_MUTE)
+
+def seek_forward():
+    send_key(VK_RIGHT)
+
+def seek_backward():
+    send_key(VK_LEFT)

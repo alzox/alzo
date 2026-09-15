@@ -1,11 +1,9 @@
 import speech_recognition as sr
 import threading 
-import queue
 import inspect
 
 import components.agent as agent
-import components.tk as tk
-
+import components.data as data
 from components.commands import COMMANDS
 
 from langchain.agents import create_agent
@@ -14,45 +12,36 @@ MISTRAL = ChatMistralAI(model="mistral-small-2503", temperature=.7) # pyright: i
 SYSTEM_PROMPT = """You are a helpful AI assistant meant to answer questions and call tools as a desktop assistant."""
 AGENT = create_agent(model = MISTRAL, tools=agent.TOOLS, system_prompt=SYSTEM_PROMPT)
 
-audio_queue = queue.Queue()
-
 def action(command):
     for keywords, func in COMMANDS.items():
         command_words = command.split()
         contains_all = all((word in command_words for word in keywords))
         if contains_all:
-            print(f"Executing command: {keywords}")
+            data.ui.put(("executed", command))
             sig = inspect.signature(func)
             params = sig.parameters
-
             if len(params) == 0:
                 func()
             else:
                 func(command)
-        # Not sure how I want this to work, maybe set a flag so shows don't invoke it, or better prompting/reviewing the prompting
-        # if len(command_words) >= 10: # Don't want this running for random pick-ups
-        #     result = AGENT.invoke({"messages": [{"role": "user", "content": f"{command}"}]})
-        #     if result['messages'][-1].content.replace(".","") != "Nothing":
-        #         tk.make_message_box(result['messages'][-1].content.replace("*",""))
     return 0
 
 def worker():
-    print("Worker Started")
     r = sr.Recognizer()  
     while True:
-        audio = audio_queue.get()
+        audio = data.audio.get()
         if audio is None:
             break
 
         try:
             command = r.recognize_google(audio).lower().replace(".","").strip() # pyright: ignore
+            data.ui.put(("recognized",command))
             if command != "":
-                print(command)
                 action(command)
-        except Exception as e:
-            print("[ERROR]")
+        except Exception:
+            pass
     
-        audio_queue.task_done()
+        data.audio.task_done()
 
 def start_worker():
     thread = threading.Thread(target=worker, daemon=True)
@@ -67,4 +56,7 @@ def start_workers():
         threads.append(t)
 
 def submit_audio(audio):
-    audio_queue.put(audio)
+    if audio is None:
+        return
+    data.audio.put(audio)
+
