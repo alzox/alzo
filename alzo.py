@@ -1,30 +1,18 @@
-import threading
-import speech_recognition as sr
 from dotenv import load_dotenv
 
 load_dotenv()
 
 import components.tk as tk
 import components.worker as worker
-import components.data as data
-
-DURATION = 3
+import components.echo as echo
+from components.listener import Listener
 
 # init
 ui = tk.UIManager()
-r = sr.Recognizer()
-m = sr.Microphone()
-with m as source: r.adjust_for_ambient_noise(source, duration=3)
-
-def listen():
-    while True:
-        with m as source:
-            data.ui.put(("start",))
-            audio = r.record(source, duration=DURATION)
-        worker.submit_audio(audio)
 
 # start all the threads
-threading.Thread(target=listen, daemon=True).start()
-worker.start_workers()
+echo.start()                          # records speaker output for echo cancellation
+worker.start_workers()                # whisper: turns command clips into text + actions
+Listener(worker.submit_audio).start() # vosk: waits for the wake word, records the command
 ui.setup()
 ui.run()

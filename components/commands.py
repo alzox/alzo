@@ -10,10 +10,16 @@ COMMANDS = {
     # MISC
     ("hate", "game"): lambda: keyboard.send('alt+f4'),
     ("clip", "that"): lambda: print("Making a clip..."),
+    ("close", "program"): lambda: os._exit(0),
+    ("shut", "down", "program"): lambda: os._exit(0),
+    ("shutdown", "program"): lambda: os._exit(0),
+    # ("gold", "gold", "gold"): lambda: os.system(rf'start "" "https://www.youtube.com/@ohnepixelraw'),
     
     # WINDOWS
     ("lock", "computer"): lambda: os.system("rundll32.exe user32.dll,LockWorkStation"),
     ("shut", "down", "computer"): lambda: os.system("shutdown /s /t 1"),
+    ("shutdown", "computer"): lambda: os.system("shutdown /s /t 1"),
+    ("turn", "off", "computer"): lambda: os.system("shutdown /s /t 1"),
     ("restart", "computer"): lambda: os.system("shutdown /r /t 1"),
     
     # OPEN/CLOSE COMMANDS
@@ -56,8 +62,8 @@ COMMANDS = {
     # ("clear", "q"): lambda: spotify.clear_queue(),
     
     # SOUND
-    ("play",): lambda: sound.play_pause(),
-    ("pause",): lambda: sound.play_pause(),
+    ("play", "sound"): lambda: sound.play_pause(),
+    ("pause", "sound"): lambda: sound.play_pause(),
     ("volume", "up"): lambda: sound.volume_up(),
     ("sound", "up"): lambda: sound.volume_up(),
     ("volume", "down"): lambda: sound.volume_down(),

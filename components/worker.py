@@ -1,8 +1,12 @@
-import speech_recognition as sr
-import threading 
+import threading
 import inspect
+import re
+
+import numpy as np
+from faster_whisper import WhisperModel
 
 import components.data as data
+import components.echo as echo
 from components.commands import COMMANDS
 
 # from langchain.agents import create_agent
@@ -25,38 +29,55 @@ def action(command):
                 func(command)
     return 0
 
+from components.listener import WAKE_WORD
+_model = None
+_model_lock = threading.Lock()
+
+def get_model():
+    # faster-whisper (CTranslate2, int8) is a lot lighter than openai-whisper for the same base.en weights
+    global _model
+    with _model_lock:
+        if _model is None:
+            _model = WhisperModel("base.en", device="cpu", compute_type="int8")
+    return _model
+
+def transcribe(audio):
+    pcm = np.frombuffer(audio.get_raw_data(convert_rate=16000, convert_width=2), dtype=np.int16)
+    segments, _ = get_model().transcribe(pcm.astype(np.float32) / 32768.0, language="en", beam_size=1)
+    text = " ".join(seg.text for seg in segments)
+    text = re.sub(r"[^\w\s]", "", text.lower()).split()
+    if WAKE_WORD in text[:3]:  # the clip starts with the wake word; drop it
+        text = text[text.index(WAKE_WORD) + 1:]
+    return " ".join(text)
+
 def worker():
-    r = sr.Recognizer()  
     while True:
-        audio = data.audio.get()
-        if audio is None:
+        item = data.audio.get()
+        if item is None:
             break
 
         try:
-            command = r.recognize_whisper(audio, model="base.en").lower().replace(".","").strip() # pyright: ignore
+            audio, ref = item
+            audio = echo.cancel(audio, ref)  # strip computer playback picked up by the mic
+            command = transcribe(audio)
             if command != "":
                 data.ui.put(("recognized",command))
                 action(command)
+            else:
+                data.ui.put(("idle",))  # heard nothing usable; go back to waiting
         except Exception as e:
             print(e)
-            pass
+            data.ui.put(("idle",))
     
         data.audio.task_done()
 
-def start_worker():
-    thread = threading.Thread(target=worker, daemon=True)
-    thread.start()
-    return thread
-
 def start_workers():
-    threads = []
-    for _ in range(5):
-        t = threading.Thread(target=worker, daemon=True)
-        t.start()
-        threads.append(t)
+    # commands only arrive after the wake word, so one worker is plenty
+    get_model()
+    threading.Thread(target=worker, daemon=True).start()
 
-def submit_audio(audio):
+def submit_audio(audio, ref=None):
     if audio is None:
         return
-    data.audio.put(audio)
+    data.audio.put((audio, ref))
 

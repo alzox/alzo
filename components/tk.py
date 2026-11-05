@@ -2,15 +2,22 @@ import tkinter as tk
 import components.data as data 
 import queue
 
+HIDE_AFTER_MS = 2000  # how long a recognized command stays on screen
+IDLE_TEXT = 'say "command"'
+MAX_DOTS = 3          # dot animation cycles "", ".", "..", "..."
+DOT_INTERVAL_MS = 350
+
 class UIManager:
     def __init__(self):
         self.root = tk.Tk()
 
         self.dot_index = 0
         self.animating = False
+        self._dots_job = None
         self._drag_offset_x = 0
         self._drag_offset_y = 0
-        self.current_status_text = "initialized"  
+        self.current_status_text = "initialized"
+        self._hide_job = None
 
         self._build_ui()
         self._setup_dragging()
@@ -30,29 +37,31 @@ class UIManager:
             self.root,
             bg=self.transparent
         )
+
         self.container.pack(
+            side="left",
             fill="both",
             expand=True,
-            padx=50,
             pady=0
         )
-
+ 
         self.status_label = tk.Label(
             self.container,
             text=self.current_status_text,
             fg="white",
             bg=self.transparent,
-            font=("Consolas", 12),
+            font=("Consolas", 16),
             anchor="s",
             justify="center",
-            wraplength=500,
-            bd=0, 
+            bd=0,
             highlightthickness=0,
             padx=0,
             pady=0
         )
-        self.status_label.pack(padx=0, pady=0)
-        
+        # packed (not placed) so the window's requested width follows the text:
+        # the message stays on one line and the window widens to fit it
+        self.status_label.pack(padx=20, pady=(20, 0))
+
     def _setup_dragging(self):
         """Make the borderless window draggable."""
         widgets = (
@@ -91,33 +100,42 @@ class UIManager:
 
             x = (screen_width - width) // 2
             y = (screen_height - height) // 2
-
-            self.root.geometry(f"{width}x{height}+{x}+{y}")
         else:
-            self.root.geometry(f"{width}x{height}")
+            # grow/shrink around the current horizontal center instead of off the right edge
+            width = max(width, self.root.minsize()[0])
+            x = self.root.winfo_x() + (self.root.winfo_width() - width) // 2
+            y = self.root.winfo_y()
+
+        self.root.geometry(f"{width}x{height}+{x}+{y}")
 
     def animation(self):
-        """Start the dot animation until stop_animation() is called."""
-        if not self.animating:
-            self.animating = True
-            self.dot_index = 0
-            self.resize_to_content(False)
-            self._animate_dots()
+        """Animate dots after the current status until stop_animation() is called."""
+        self.stop_animation()
+        self.animating = True
+        self.dot_index = 0
+        self._animate_dots()
 
-   
+    def stop_animation(self):
+        self.animating = False
+        if self._dots_job is not None:
+            self.root.after_cancel(self._dots_job)
+            self._dots_job = None
+        self.status_label.config(text=self.current_status_text)
+
     def _animate_dots(self):
         if not self.animating:
             return
 
-        dots = "." * (self.dot_index % 5)
-        combined_text = f"{self.current_status_text}\n{dots}"
-        self.status_label.config(text=combined_text)
+        # same line as the text, padded to a fixed width so the text doesn't shift
+        dots = "." * (self.dot_index % (MAX_DOTS + 1))
+        self.status_label.config(text=f"{self.current_status_text}{dots:<{MAX_DOTS}}")
         self.dot_index += 1
 
         self.resize_to_content(center=False)
-        self.root.after(350, self._animate_dots)
+        self._dots_job = self.root.after(DOT_INTERVAL_MS, self._animate_dots)
 
     def set_status(self, text, color):
+        text = " ".join(str(text).split())  # always a single line
         self.current_status_text = text
         self.status_label.config(
             text=text,
@@ -126,6 +144,25 @@ class UIManager:
 
         self.root.update_idletasks()
         self.resize_to_content(center=False)
+
+    def _schedule_hide(self, delay_ms=HIDE_AFTER_MS):
+        """Clear the message after delay_ms; restarts the timer if one is pending."""
+        self._cancel_hide()
+        self._hide_job = self.root.after(delay_ms, self._hide)
+
+    def _cancel_hide(self):
+        if self._hide_job is not None:
+            self.root.after_cancel(self._hide_job)
+            self._hide_job = None
+
+    def _hide(self):
+        self._hide_job = None
+        self._idle()
+
+    def _idle(self):
+        """Back to waiting for the wake word."""
+        self.stop_animation()
+        self.set_status(IDLE_TEXT, "gray")
 
     def process_worker_status(self):
         try:
@@ -136,11 +173,24 @@ class UIManager:
             if command == "start":
                 self.animation()
 
+            elif command == "idle":
+                self._cancel_hide()
+                self._idle()
+
+            elif command == "wake":
+                self._cancel_hide()
+                self.set_status("listening", "white")
+                self.animation()
+
             elif command == "recognized":
+                self.stop_animation()
                 self.set_status(value, "gray")
+                self._schedule_hide()
 
             elif command == "executed":
+                self.stop_animation()
                 self.set_status(value, "white")
+                self._schedule_hide()
 
             elif command == "close":
                 self.root.destroy()
